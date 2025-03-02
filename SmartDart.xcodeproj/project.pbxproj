@@ -31,6 +31,7 @@
 		BB26D38E2D408EEE0061B193 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = BB26D38D2D408EEE0061B193 /* FirebaseStorage */; };
 		BB26D3902D408EEE0061B193 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = BB26D38F2D408EEE0061B193 /* FirebaseStorageCombine-Community */; };
 		BB26D3922D408EEE0061B193 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = BB26D3912D408EEE0061B193 /* FirebaseVertexAI */; };
+		BB78C5A42D44458F000220DD /* SwiftUICharts in Frameworks */ = {isa = PBXBuildFile; productRef = BB78C5A32D44458F000220DD /* SwiftUICharts */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +104,7 @@
 				BB26D38E2D408EEE0061B193 /* FirebaseStorage in Frameworks */,
 				BB26D3722D408EEE0061B193 /* FirebaseCore in Frameworks */,
 				BB26D3662D408EEE0061B193 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
+				BB78C5A42D44458F000220DD /* SwiftUICharts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -187,6 +189,7 @@
 				BB26D38D2D408EEE0061B193 /* FirebaseStorage */,
 				BB26D38F2D408EEE0061B193 /* FirebaseStorageCombine-Community */,
 				BB26D3912D408EEE0061B193 /* FirebaseVertexAI */,
+				BB78C5A32D44458F000220DD /* SwiftUICharts */,
 			);
 			productName = SmartDart;
 			productReference = BB26D3332D404F3C0061B193 /* SmartDart.app */;
@@ -272,6 +275,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				BB26D3622D408AE30061B193 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				BB78C5A22D44458F000220DD /* XCRemoteSwiftPackageReference "SwiftUICharts" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BB26D3342D404F3C0061B193 /* Products */;
@@ -640,6 +644,14 @@
 				minimumVersion = 11.7.0;
 			};
 		};
+		BB78C5A22D44458F000220DD /* XCRemoteSwiftPackageReference "SwiftUICharts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/willdale/SwiftUICharts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -762,6 +774,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BB26D3622D408AE30061B193 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseVertexAI;
+		};
+		BB78C5A32D44458F000220DD /* SwiftUICharts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB78C5A22D44458F000220DD /* XCRemoteSwiftPackageReference "SwiftUICharts" */;
+			productName = SwiftUICharts;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

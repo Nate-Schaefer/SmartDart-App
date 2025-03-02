@@ -66,6 +66,7 @@ struct LoginScreen: View {
     @State private var password = ""
     @State private var errorMessage = ""
     @State private var isLoggedIn = false
+    @State private var username = "" // To store the actual username
 
     var body: some View {
         VStack(spacing: 20) {
@@ -102,7 +103,7 @@ struct LoginScreen: View {
             }
             .padding(.top)
 
-            NavigationLink(destination: WelcomeScreen(name: usernameOrEmail), isActive: $isLoggedIn) {
+            NavigationLink(destination: SmartDart(name: username), isActive: $isLoggedIn) {
                 EmptyView()
             }
         }
@@ -120,7 +121,20 @@ struct LoginScreen: View {
                 if let error = error {
                     errorMessage = "Error logging in: \(error.localizedDescription)"
                 } else {
-                    isLoggedIn = true
+                    // Get the user's username from Firestore
+                    let db = Firestore.firestore()
+                    let usersRef = db.collection("users").whereField("email", isEqualTo: usernameOrEmail)
+                    usersRef.getDocuments { snapshot, error in
+                        if let error = error {
+                            errorMessage = "Error fetching user data: \(error.localizedDescription)"
+                        } else if let document = snapshot?.documents.first, let fetchedUsername = document["username"] as? String {
+                            // Update username and proceed to the welcome screen
+                            username = fetchedUsername
+                            isLoggedIn = true
+                        } else {
+                            errorMessage = "No user found with that email."
+                        }
+                    }
                 }
             }
         } else {
@@ -136,6 +150,8 @@ struct LoginScreen: View {
                         if let error = error {
                             errorMessage = "Error logging in: \(error.localizedDescription)"
                         } else {
+                            // Update username and proceed to the welcome screen
+                            username = usernameOrEmail // In this case, we assume usernameOrEmail is the username
                             isLoggedIn = true
                         }
                     }
@@ -207,7 +223,7 @@ struct SignUpScreen: View {
         .edgesIgnoringSafeArea(.all)
         .frame(alignment: .center)
         .navigationDestination(isPresented: $showWelcome) {
-            WelcomeScreen(name: username)
+            SmartDart(name: username)
         }
     }
 
@@ -229,7 +245,10 @@ struct SignUpScreen: View {
         // Add user data to Firestore
         db.collection("users").document(Auth.auth().currentUser!.uid).setData([
             "username": username,
-            "email": email
+            "email": email,
+            "wins": 0,
+            "losses": 0,
+            "elo": 1000
         ]) { error in
             if let error = error {
                 errorMessage = "Error saving user data: \(error.localizedDescription)"
@@ -240,53 +259,6 @@ struct SignUpScreen: View {
     }
 }
 
-
-struct WelcomeScreen: View {
-    var name: String
-    @Environment(\.presentationMode) var presentationMode // Used to navigate back to the starting screen
-
-    var body: some View {
-        VStack {
-            Text("Welcome, \(name)")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding()
-
-            Button(action: {
-                logout()
-            }) {
-                Text("Log Out")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-            }
-            .padding()
-
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.gray.opacity(0.1))
-        .edgesIgnoringSafeArea(.all)
-        .frame(alignment: .center)
-        .navigationBarBackButtonHidden(true)
-    }
-
-    func logout() {
-        // Sign out the user using Firebase Authentication
-        do {
-            try Auth.auth().signOut()
-
-            // Navigate back to the starting screen (ContentView)
-            presentationMode.wrappedValue.dismiss()
-
-        } catch let signOutError as NSError {
-            print("Error signing out: %@", signOutError)
-        }
-    }
-}
 
 struct StartingScreen_Previews: PreviewProvider {
     static var previews: some View {
