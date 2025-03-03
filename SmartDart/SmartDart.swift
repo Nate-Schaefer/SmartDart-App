@@ -923,40 +923,17 @@ struct DashboardScreen: View {
                                 .foregroundColor(eloColor)
                         })
 
-                        DashboardCard(title: "Performance", content: {
-                            VStack {
-                                HStack(alignment: .bottom, spacing: 10) {
-                                    VStack {
-                                        Text("\(wins)") // Display the number of wins
-                                            .font(.caption)
-                                            .foregroundColor(.green)
-                                        Rectangle()
-                                            .fill(Color.green)
-                                            .frame(width: 30, height: CGFloat(wins) * 10)
-                                    }
-                                    VStack {
-                                        Text("\(losses)") // Display the number of losses
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                        Rectangle()
-                                            .fill(Color.red)
-                                            .frame(width: 30, height: CGFloat(losses) * 10)
-                                    }
-                                }
-                                .padding(.vertical, 10)
-                                Text("Wins vs Losses")
-                                    .font(.footnote)
-                            }
-                        })
+                        // Replace the old performance card with the new one
+                        PerformanceCard(wins: wins, losses: losses)
                     }
-                    HStack(spacing: 20) {
-                        DashboardCard(title: "Elo History", content: {
-                            EloHistoryChart(eloHistory: eloHistory)
-                        })
-                        DashboardCard(title: "Elo History", content: {
-                            EloHistoryChart(eloHistory: eloHistory)
-                        })
-                    }
+                    
+                    // Second row: ELO History (full width)
+                    DashboardCard(title: "Elo History", content: {
+                        EloHistoryChart(eloHistory: eloHistory)
+                    })
+                    
+                    // Third row: Leaderboard (full width)
+                    LeaderboardCard()
                 }
             }
             .padding()
@@ -1038,27 +1015,368 @@ struct DashboardScreen: View {
     }
 }
 
-struct EloHistoryChart: View {
-    var eloHistory: [EloHistoryItem]
-
+struct PerformanceCard: View {
+    var wins: Int
+    var losses: Int
+    
+    // Fixed maximum height for the bars
+    private let maxBarHeight: CGFloat = 70
+    
     var body: some View {
-        Chart {
-            ForEach(eloHistory) { item in
-                LineMark(
-                    x: .value("Date", item.timestamp, unit: .day),
-                    y: .value("Elo", item.elo)
-                )
-                .interpolationMethod(.catmullRom) // Smooths the line
+        VStack {
+            Text("Performance")
+                .font(.headline)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            VStack {
+                HStack(alignment: .bottom, spacing: 20) {
+                    // Wins bar
+                    VStack {
+                        Text("\(wins)")
+                            .font(.subheadline)
+                            .foregroundColor(.green)
+                            .fontWeight(.bold)
+                        
+                        Rectangle()
+                            .fill(Color.green)
+                            .frame(width: 30, height: calculateBarHeight(value: wins))
+                    }
+                    
+                    // Losses bar
+                    VStack {
+                        Text("\(losses)")
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                            .fontWeight(.bold)
+                        
+                        Rectangle()
+                            .fill(Color.red)
+                            .frame(width: 30, height: calculateBarHeight(value: losses))
+                    }
+                }
+                .padding(.vertical, 10)
+                
+                // Win rate calculation
+                if wins + losses > 0 {
+                    Text("Win Rate: \(calculateWinRate())%")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                        .padding(.top, 5)
+                }
+                
+                Text("Wins vs Losses")
+                    .font(.footnote)
             }
         }
-        .chartYAxis {
-            AxisMarks(position: .leading) // Show Y-axis on the left
-        }
-        .chartXAxis {
-            AxisMarks(values: .stride(by: .day)) // Customize X-axis tick spacing
-        }
-        .frame(height: 200) // Set the height for the chart
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: 200)
+        .background(Color.white)
+        .cornerRadius(10)
+        .shadow(color: Color.gray.opacity(0.3), radius: 5, x: 0, y: 2)
+    }
+    
+    // Calculate bar heights with correct handling for zero values
+    private func calculateBarHeight(value: Int) -> CGFloat {
+        let total = wins + losses
+        
+        // If there are no games at all, show minimal height
+        if total == 0 {
+            return 10
+        }
+        
+        // If this specific value is zero, return minimal height
+        if value == 0 {
+            return 2  // Minimal height to show empty bar
+        }
+        
+        // Calculate proportional height based on the maximum value
+        let maxValue = max(wins, losses)
+        let proportion = CGFloat(value) / CGFloat(maxValue)
+        return maxBarHeight * proportion
+    }
+    
+    // Calculate win rate percentage
+    private func calculateWinRate() -> String {
+        let total = wins + losses
+        if total == 0 {
+            return "0"
+        }
+        
+        let winRate = Double(wins) / Double(total) * 100
+        return String(format: "%.1f", winRate)
+    }
+}
+
+struct LeaderboardCard: View {
+    @State private var topPlayers: [UserRanking] = []
+    @State private var isLoading: Bool = true
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        VStack(spacing: 10) {
+            Text("Leaderboard")
+                .font(.headline)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            if isLoading {
+                ProgressView("Loading leaderboard...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            } else if topPlayers.isEmpty {
+                Text("No players found")
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 10) {
+                    // Header
+                    HStack {
+                        Text("Rank")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .frame(width: 40, alignment: .leading)
+                        
+                        Text("Player")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Text("ELO")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .frame(width: 60, alignment: .trailing)
+                    }
+                    .padding(.bottom, 5)
+                    
+                    // Player list
+                    ForEach(Array(topPlayers.enumerated()), id: \.element.id) { index, player in
+                        HStack {
+                            Text("\(index + 1)")
+                                .font(.subheadline)
+                                .foregroundColor(index < 3 ? .orange : .gray)
+                                .fontWeight(index < 3 ? .bold : .regular)
+                                .frame(width: 40, alignment: .leading)
+                            
+                            Text(player.displayName)
+                                .font(.subheadline)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text("\(player.elo)")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(getEloColor(elo: player.elo))
+                                .frame(width: 60, alignment: .trailing)
+                        }
+                        .padding(.vertical, 4)
+                        
+                        if index < topPlayers.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: 300)
+        .background(Color.white)
+        .cornerRadius(10)
+        .shadow(color: Color.gray.opacity(0.3), radius: 5, x: 0, y: 2)
+        .onAppear {
+            fetchTopPlayers()
+        }
+    }
+    
+    private func fetchTopPlayers() {
+        let db = Firestore.firestore()
+        
+        // Query the top 5 users by ELO
+        db.collection("users")
+            .order(by: "elo", descending: true)
+            .limit(to: 5)
+            .getDocuments { snapshot, error in
+                isLoading = false
+                
+                if let error = error {
+                    errorMessage = "Failed to load leaderboard"
+                    print("Error fetching leaderboard: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    errorMessage = "No leaderboard data"
+                    return
+                }
+                
+                self.topPlayers = documents.compactMap { document in
+                    let data = document.data()
+                    let id = document.documentID
+                    guard let elo = data["elo"] as? Int else { return nil }
+                    let displayName = data["displayName"] as? String ?? "Player"
+                    
+                    return UserRanking(id: id, displayName: displayName, elo: elo)
+                }
+            }
+    }
+    
+    private func getEloColor(elo: Int) -> Color {
+        switch elo {
+        case 0..<1000: return .gray
+        case 1000..<1400: return .blue
+        case 1400..<1800: return .green
+        case 1800..<2200: return .orange
+        default: return .yellow
+        }
+    }
+}
+
+struct UserRanking: Identifiable {
+    var id: String
+    var displayName: String
+    var elo: Int
+}
+
+struct EloHistoryChart: View {
+    var eloHistory: [EloHistoryItem]
+    
+    // Computed properties to get min, max, and starting values
+    private var sortedHistory: [EloHistoryItem] {
+        return eloHistory.sorted { $0.timestamp < $1.timestamp }
+    }
+    
+    private var minElo: Int {
+        return eloHistory.min { $0.elo < $1.elo }?.elo ?? 0
+    }
+    
+    private var maxElo: Int {
+        return eloHistory.max { $0.elo < $1.elo }?.elo ?? 0
+    }
+    
+    private var startingElo: Int {
+        return sortedHistory.first?.elo ?? 0
+    }
+    
+    private var latestElo: Int {
+        return sortedHistory.last?.elo ?? 0
+    }
+    
+    private var eloChange: Int {
+        return latestElo - startingElo
+    }
+    
+    private var isPositiveChange: Bool {
+        return eloChange >= 0
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Current vs Starting ELO display with smaller text
+            if !eloHistory.isEmpty {
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Current")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        Text("\(latestElo)")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                    }
+                    
+                    Spacer()
+                    
+                    // ELO Change
+                    HStack(spacing: 1) {
+                        Image(systemName: isPositiveChange ? "arrow.up" : "arrow.down")
+                            .font(.caption2)
+                            .foregroundColor(isPositiveChange ? .green : .red)
+                        
+                        Text("\(abs(eloChange))")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(isPositiveChange ? .green : .red)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("Starting")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        Text("\(startingElo)")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+            
+            // ELO Chart
+            if eloHistory.isEmpty {
+                Text("No ELO history available")
+                    .foregroundColor(.gray)
+                    .font(.caption)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .multilineTextAlignment(.center)
+            } else {
+                Chart {
+                    ForEach(sortedHistory) { item in
+                        LineMark(
+                            x: .value("Date", item.timestamp, unit: .day),
+                            y: .value("Elo", item.elo)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(Color.blue.gradient)
+                        
+                        // Add points at each data point
+                        PointMark(
+                            x: .value("Date", item.timestamp, unit: .day),
+                            y: .value("Elo", item.elo)
+                        )
+                        .foregroundStyle(Color.blue)
+                        .symbolSize(20) // Smaller point size
+                    }
+                    
+                    // Add a rule mark for the starting ELO
+                    RuleMark(y: .value("Starting ELO", startingElo))
+                        .foregroundStyle(Color.gray.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .trailing) {
+                            Text("St")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                        }
+                }
+                .chartYScale(domain: (minElo - 30)...(maxElo + 30))
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                        if let intValue = value.as(Int.self) {
+                            AxisValueLabel {
+                                Text("\(intValue)")
+                                    .font(.system(size: 8))
+                            }
+                        }
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: 7)) { value in
+                        AxisGridLine()
+                        if let date = value.as(Date.self) {
+                            AxisValueLabel {
+                                Text(date, format: .dateTime.month().day())
+                                    .font(.system(size: 8))
+                            }
+                        }
+                    }
+                }
+                .frame(height: 110) // Reduced chart height
+                .padding(.top, 4)
+            }
+        }
     }
 }
 
@@ -1089,7 +1407,7 @@ struct DashboardCard<Content: View>: View {
             content
         }
         .padding()
-        .frame(maxWidth: .infinity, maxHeight: 200)
+        .frame(maxWidth: .infinity, maxHeight: 300)
         .background(Color.white)
         .cornerRadius(10)
         .shadow(color: Color.gray.opacity(0.3), radius: 5, x: 0, y: 2)
