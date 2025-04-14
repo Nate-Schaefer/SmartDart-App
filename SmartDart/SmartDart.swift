@@ -7,9 +7,9 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseDatabase
 import FirebaseFirestore
 import Charts
-
 
 struct SmartDart: View {
     var name: String
@@ -1416,36 +1416,75 @@ struct DashboardCard<Content: View>: View {
 
 struct PlayScreen: View {
     @State private var showGameScreen = false
+    @State private var gameCode: String = ""
+    @State private var errorMessage: String? = nil
 
     var body: some View {
         VStack {
-            Text("Play Screen")
+            Text("Play SmartDart")
                 .font(.largeTitle)
                 .padding()
-
+            
             Spacer()
-
+            
+            TextField("Enter unique game code", text: $gameCode)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.horizontal)
+            
             Button(action: {
-                showGameScreen = true
+                checkGameCode()
             }) {
-                Text("Start New Game")
+                Text("Join Online Game")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(Color.orange)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                     .padding(.horizontal)
             }
-
+            
+            
+            
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
+            }
+            
             Spacer()
         }
         .padding()
         .fullScreenCover(isPresented: $showGameScreen) {
-            GameScreen()
+            // Pass the game code to the GameScreen
+            GameScreen(gameCode: gameCode)
         }
     }
+    
+    /// Checks the Realtime Database for the game code under "games"
+    func checkGameCode() {
+        let ref = Database.database().reference()
+        let gameRef = ref.child("games").child(gameCode)
+        
+        gameRef.observeSingleEvent(of: .value, with: { snapshot in
+            if snapshot.exists() {
+                // Valid code
+                errorMessage = nil
+                showGameScreen = true
+            } else {
+                // Code not found
+                errorMessage = "Invalid code. Please try again."
+                showGameScreen = false
+            }
+        }) { error in
+            errorMessage = "Error verifying code: \(error.localizedDescription)"
+            showGameScreen = false
+        }
+    }
+    
+    
 }
+
 
 struct AccountScreen: View {
     var name: String
